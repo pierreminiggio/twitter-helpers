@@ -2,47 +2,62 @@
 
 namespace PierreMiniggio\TwitterHelpers;
 
+use Abraham\TwitterOAuth\TwitterOAuth;
+
 use Exception;
 
 class TwitterPoster
 {
+    public const VERSION_1 = '1';
+    public const VERSION_2 = '2';
 
-    /** @var TwitterAPI */
-    private $api;
+    private TwitterAPI $api;
+    private TwitterOAuth $apiV2;
 
-    /**
-     * @param string $oauthAccessToken
-     * @param string $oauthAccessToken_secret
-     * @param string $consumerKey
-     * @param string $consumerSecret
-     */
     public function __construct(
-        $oauthAccessToken,
-        $oauthAccessToken_secret,
-        $consumerKey,
-        $consumerSecret
+        string $oauthAccessToken,
+        string $oauthAccessTokenSecret,
+        string $consumerKey,
+        string $consumerSecret
     )
     {
         $this->api = new TwitterAPI([
             'oauth_access_token' => $oauthAccessToken,
-            'oauth_access_token_secret' => $oauthAccessToken_secret,
+            'oauth_access_token_secret' => $oauthAccessTokenSecret,
             'consumer_key' => $consumerKey,
             'consumer_secret' => $consumerSecret
         ]);
+
+        $this->apiV2 = new TwitterOAuth($consumerKey, $consumerSecret, $oauthAccessToken, $oauthAccessTokenSecret);
+        $this->apiV2->setApiVersion('2');
     }
 
     /**
-     * @param string $status
-     * 
-     * @return string
-     * 
      * @throws Exception
      */
-    function updateStatus($status)
+    public function updateStatus(string $status, string $version = self::VERSION_1): string
     {
-        return $this->api->setPostfields(['status' => $status])
-            ->buildOauth('https://api.twitter.com/1.1/statuses/update.json', 'POST')
-            ->performRequest()
-        ;
+        if ($version === self::VERSION_1) {
+            return $this->api->setPostfields(['status' => $status])
+                ->buildOauth('https://api.twitter.com/1.1/statuses/update.json', 'POST')
+                ->performRequest()
+            ;
+        }
+
+        if ($version === self::VERSION_2) {
+            $tweetParams = [
+                'text' => $status
+            ];
+        
+            $status = $this->apiV2->post('tweets', $tweetParams);
+
+            if (! isset($status->data)) {
+                throw new Exception('No data in API Response');
+            }
+
+            return json_encode($status->data);
+        }
+        
+        throw new Exception('Bad version');
     }
 }
