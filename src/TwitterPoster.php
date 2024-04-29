@@ -51,6 +51,10 @@ class TwitterPoster
         
             $status = $this->apiV2->post('tweets', $tweetParams);
 
+            if (isset($status->status) && $status->status >= 400) {
+                throw new Exception('API' . (isset($status->title) ? (' ' . $status->title) : '') . ' error ' . $status->status . ' : ' . $status->detail);
+            }
+            
             if (! isset($status->data)) {
                 throw new Exception('No data in API Response');
             }
