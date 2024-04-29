@@ -56,7 +56,7 @@ class TwitterPoster
             }
             
             if (! isset($status->data)) {
-                throw new Exception('No data in API Response');
+                throw new Exception('No data in API Response. Response : ' . json_encode($status));
             }
 
             return json_encode($status->data);
